@@ -3,60 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BONY-XMD PAIR</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" rel="stylesheet">
+<title>BONY XMD PAIR</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}
-body{background:linear-gradient(135deg,#0a0a0f,#1a1a2e);color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.container{max-width:500px;width:100%}
-.logo{font-size:36px;font-weight:800;background:linear-gradient(90deg,#00f5ff,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:8px}
-.subtitle{text-align:center;color:#aaa;margin-bottom:30px;font-size:14px;letter-spacing:1px}
-.card{background:#111122;border:1px solid #2a2a4a;border-radius:20px;padding:30px;box-shadow:0 0 40px rgba(139,92,246,0.3)}
-input{width:100%;padding:14px;border-radius:12px;border:1px solid #333;background:#0a0a0f;color:#fff;margin:12px 0;outline:none;font-size:15px}
-input:focus{border-color:#8b5cf6}
-.btn{background:linear-gradient(90deg,#00f5ff,#8b5cf6);border:none;padding:14px;border-radius:12px;color:#000;font-weight:700;width:100%;margin:8px 0;cursor:pointer;font-size:16px;transition:0.3s}
-.btn:hover{transform:scale(1.02)}
-.btn2{background:#1a1a2e;color:#fff;border:1px solid #333}
-#result{margin-top:15px;padding:12px;background:#0a0a0f;border-radius:10px;word-break:break-all;font-size:14px}
-img{max-width:280px;margin:15px auto;display:block;border-radius:12px}
-</style>
-</head>
-<body>
-<div class="container">
-  <h1 class="logo">BONY-XMD</h1>
-  <p class="subtitle">WHATSAPP SESSION INFRASTRUCTURE</p>
-  <div class="card">
-    <h2 style="margin-bottom:10px">Connect with BONY-XMD</h2>
-    <p style="color:#aaa;font-size:14px;margin-bottom:20px">Fast pairing hub for your WhatsApp session</p>
-    <input type="text" id="number" placeholder="2547xxxxxxx">
-    <button class="btn" onclick="getCode()">🔗 Pair a device</button>
-    <button class="btn btn2" onclick="getQR()">📱 Use QR code</button>
-    <div id="result"></div>
-    <img id="qrimg"/>
-  </div>
-</div>
-
-<script>
-async function getCode(){
-  let num = document.getElementById('number').value;
-  if(!num) return alert('Enter number with country code');
-  document.getElementById('result').innerHTML = 'Generating code...';
-  let res = await fetch('/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({number:num})});
-  let data = await res.json();
-  if(data.code) document.getElementById('result').innerHTML = `Pairing Code: <b style="color:#00f5ff">${data.code}</b>`;
-  else document.getElementById('result').innerHTML = `Error: ${data.error}`;
-}
-async function getQR(){
-  document.getElementById('result').innerHTML = 'Waiting for QR...';
-  let res = await fetch('/qr');
-  let data = await res.json();
-  if(data.qr) {
-    document.getElementById('qrimg').src = data.qr;
-    document.getElementById('result').innerHTML = 'Scan this QR in WhatsApp';
-  } else {
-    document.getElementById('result').innerHTML = 'Click "Pair a device" first';
-  }
-}
-</script>
-</body>
-</html>
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Courier New',monospace}
+  body{background:#000;color:#00ff00;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;background-image:radial-gradient(#00ff0022 1px, transparent 1px);background-size:20px 20px}
+  .card{background:#020202;border:1px solid #00ff00;border-radius:12px;padding:25px;width:100%;max-width:520px;box-shadow:0 0 40px rgba
