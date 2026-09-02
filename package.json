@@ -1,13 +1,15 @@
 {
   "name": "bony-xmd-pair",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "description": "BONY XMD Session ID Generator",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.14",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "@hapi/boom": "^10.0.1"
   },
   "engines": {
     "node": "18.x"
