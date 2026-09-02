@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/pair.js": {
-      "runtime": "@vercel/node"
-    }
-  }
-}
