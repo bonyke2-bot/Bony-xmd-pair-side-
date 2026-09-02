@@ -1,3 +1,4 @@
-node_modules/
-session_*/
-.vercel
+node_modules
+.git
+README.md
+sessions
