@@ -1,7 +1,8 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { default: makeWASocket, useMultiFileAuthState, delay, Browsers } = require('@whiskeysockets/baileys');
+const pino = require('pino');
+const { default: makeWASocket, useMultiFileAuthState, delay, Browsers, DisconnectReason } = require('@whiskeysockets/baileys');
 
 const app = express();
 app.use(express.json());
@@ -15,7 +16,6 @@ app.post('/pair', async (req, res) => {
   let { number, server } = req.body;
   if (!number) return res.status(400).json({ error: 'Number required' });
   
-  // FIXES "WRONG NUMBER" - removes + spaces () 
   number = number.replace(/[^0-9]/g, '');
   if (number.length < 10) return res.json({ error: 'Wrong number format. Use: 254748339103' });
 
@@ -27,9 +27,12 @@ app.post('/pair', async (req, res) => {
     const { state, saveCreds } = await useMultiFileAuthState(sessionId);
     
     const sock = makeWASocket({
+      logger: pino({ level: 'silent' }),
       auth: state,
       printQRInTerminal: false,
-      browser: Browsers.ubuntu('BONY-XMD')
+      browser: Browsers.ubuntu('BONY-XMD'),
+      connectTimeoutMs: 60000,
+      defaultQueryTimeoutMs: 0
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -37,22 +40,28 @@ app.post('/pair', async (req, res) => {
     let sent = false;
     sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect } = update;
+      
       if(connection === 'open' && !sent){
         sent = true;
+        await delay(3000);
         const code = await sock.requestPairingCode(number);
         const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
         res.json({ code: formattedCode });
         await delay(5000);
         sock.ws.close();
       }
+      
+      if(connection === 'close' && !sent){
+        res.json({ error: 'WhatsApp connection failed. Try again in 1 min' });
+      }
     })
 
     setTimeout(() => {
       if(!sent) {
-        res.json({ error: 'Timeout. WhatsApp did not respond. Try again' });
+        res.json({ error: 'Timeout. WhatsApp is slow. Try again' });
         sock.ws.close();
       }
-    }, 20000);
+    }, 30000);
 
   } catch (err) {
     console.log(err);
