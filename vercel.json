@@ -1,5 +1,7 @@
 {
-  "rewrites": [
-    { "source": "/", "destination": "/api/pair" }
-  ]
+  "functions": {
+    "api/pair.js": {
+      "runtime": "@vercel/node"
+    }
+  }
 }
