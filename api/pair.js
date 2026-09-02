@@ -1,77 +1,48 @@
-const { default: makeWASocket, useMultiFileAuthState, delay, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
-const pino = require('pino');
+const { default: makeWASocket, useSingleFileAuthState, Browsers, fetchLatestBaileysVersion, delay } = require('@whiskeysockets/baileys');
+const { Boom } = require('@hapi/boom');
+const fs = require('fs');
 
 export default async function handler(req, res) {
-  // Serve the HTML page
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  
   if (req.method === 'GET') {
-    res.setHeader('Content-Type', 'text/html');
-    return res.send(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BONY XMD PAIR</title>
-<style>
-body{background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
-.box{background:#1a1a1a;padding:30px;border-radius:15px;width:90%;max-width:400px;text-align:center;border:1px solid #00ff88}
-input{width:100%;padding:12px;margin:10px 0;background:#0a0a0a;border:1px solid #00ff88;color:#fff;border-radius:8px;box-sizing:border-box}
-button{width:100%;padding:12px;background:#00ff88;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer}
-#result{margin-top:15px;font-size:18px;color:#00ff88;word-break:break-word}
-</style>
-</head>
-<body>
-<div class="box">
-<h2>🔥 BONY XMD PAIR 🔥</h2>
-<input type="text" id="number" placeholder="254748339103">
-<button onclick="pair()">⚡ Generate Session</button>
-<div id="result"></div>
-</div>
-<script>
-async function pair(){
-const num = document.getElementById('number').value;
-document.getElementById('result').innerText = 'Generating...';
-const r = await fetch('/api/pair', {method: 'POST',headers: {'Content-Type': 'application/json'},body: JSON.stringify({number: num})});
-const data = await r.json();
-document.getElementById('result').innerText = data.code || data.error;
-}
-</script>
-</body>
-</html>
-    `);
+    return res.status(200).send(`
+<!DOCTYPE html><html><head><title>BONY XMD PAIR</title>
+<style>body{background:#000;color:#0f0;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh} .box{background:#111;padding:30px;border-radius:10px;border:1px solid #0f0} input,button{padding:10px;width:100%;margin:5px 0;background:#000;color:#0f0;border:1px solid #0f0}</style>
+</head><body><div class="box"><h2>BONY XMD PAIR</h2>
+<input id="num" placeholder="2547XXXXXXXX"><button onclick="p()">Get Code</button><h3 id="r"></h3></div>
+<script>async function p(){document.getElementById('r').innerText='Wait...';
+let n=document.getElementById('num').value;let x=await fetch('/api/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({number:n})});
+let d=await x.json();document.getElementById('r').innerText=d.code||d.error}</script></body></html>`);
   }
 
-  // Handle pairing code request
   if (req.method === 'POST') {
     const { number } = req.body;
-    if (!number) return res.status(400).json({ error: 'Number required' });
-
-    const cleanNumber = number.replace(/[^0-9]/g, '');
-    const sessionPath = `/tmp/${cleanNumber}-${Date.now()}`;
+    if(!number) return res.status(400).json({error: "Number required"});
     
+    const cleanNumber = number.replace(/[^0-9]/g, '');
+    const { state, saveCreds } = useSingleFileAuthState(`/tmp/${cleanNumber}.json`);
+    const { version } = await fetchLatestBaileysVersion();
+
+    const sock = makeWASocket({
+      version,
+      auth: state,
+      printQRInTerminal: false,
+      logger: { level: 'fatal' },
+      browser: Browsers.macOS('Desktop')
+    });
+
+    sock.ev.on('creds.update', saveCreds);
+
     try {
-      const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-      const { version } = await fetchLatestBaileysVersion();
-
-      const sock = makeWASocket({
-        version,
-        auth: state,
-        logger: pino({ level: 'silent' }),
-        browser: Browsers.macOS('Chrome')
-      });
-
-      sock.ev.on('creds.update', saveCreds);
-
-      if (!sock.authState.creds.registered) {
-        await delay(2000);
+      await delay(1000);
+      if(!sock.authState.creds.registered){
         const code = await sock.requestPairingCode(cleanNumber);
-        await sock.logout(); // close connection
+        await sock.logout();
         return res.json({ code: `BONY-BOT ${code}` });
       }
-
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: 'Failed. Try again in 10s' });
+    } catch (e) {
+      return res.status(500).json({ error: e.message || "Failed to get code" });
     }
   }
 }
