@@ -1,9 +1,29 @@
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const { default: makeWASocket, useMultiFileAuthState, delay, Browsers } = require('@whiskeysockets/baileys');
+
+const app = express();
+app.use(express.json());
+app.use(express.static('public'));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pair.html'));
+});
+
 app.post('/pair', async (req, res) => {
-  const { number } = req.body;
-  if (!number) return res.json({ error: 'Number required' });
+  let { number, server } = req.body;
+  if (!number) return res.status(400).json({ error: 'Number required' });
+  
+  // FIXES "WRONG NUMBER" - removes + spaces () 
+  number = number.replace(/[^0-9]/g, '');
+  if (number.length < 10) return res.json({ error: 'Wrong number format. Use: 254748339103' });
+
+  console.log(`Pairing on ${server} for ${number}`);
+  const sessionId = `session_${number}`;
+  if(!fs.existsSync(sessionId)) fs.mkdirSync(sessionId);
 
   try {
-    const sessionId = `session_${number}`; // unique folder per number
     const { state, saveCreds } = await useMultiFileAuthState(sessionId);
     
     const sock = makeWASocket({
@@ -14,17 +34,31 @@ app.post('/pair', async (req, res) => {
 
     sock.ev.on('creds.update', saveCreds);
 
-    await delay(2000);
-    
-    const code = await sock.requestPairingCode(number);
-    const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
+    let sent = false;
+    sock.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect } = update;
+      if(connection === 'open' && !sent){
+        sent = true;
+        const code = await sock.requestPairingCode(number);
+        const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
+        res.json({ code: formattedCode });
+        await delay(5000);
+        sock.ws.close();
+      }
+    })
 
-    res.json({ code: formattedCode });
-
-    setTimeout(() => sock.ws.close(), 10000);
+    setTimeout(() => {
+      if(!sent) {
+        res.json({ error: 'Timeout. WhatsApp did not respond. Try again' });
+        sock.ws.close();
+      }
+    }, 20000);
 
   } catch (err) {
     console.log(err);
     res.json({ error: err.message });
   }
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`BONY XMD Running on ${PORT}`));
