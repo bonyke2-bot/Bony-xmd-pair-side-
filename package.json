@@ -9,7 +9,8 @@
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.14",
     "express": "^4.19.2",
-    "@hapi/boom": "^10.0.1"
+    "@hapi/boom": "^10.0.1",
+    "pino": "^9.3.2"
   },
   "engines": {
     "node": "18.x"
