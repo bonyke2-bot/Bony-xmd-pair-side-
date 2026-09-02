@@ -1,57 +1,52 @@
+const express = require('express');
 const fs = require('fs');
+const path = require('path');
 const pino = require('pino');
 const { default: makeWASocket, useMultiFileAuthState, delay, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 
-export default async function handler(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  
-  let { number, server } = req.body;
+const app = express();
+app.use(express.json());
+app.use(express.static('public'));
+
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  next();
+});
+
+app.post('/api/pair', async (req, res) => {
+  const { number } = req.body;
   if (!number) return res.status(400).json({ error: 'Number required' });
+
+  const cleanNumber = number.replace(/[^0-9]/g, '');
+  const sessionPath = `/tmp/${cleanNumber}`;
   
-  // CLEAN NUMBER - THIS FIXES "WRONG NUMBER"
-  number = number.replace(/[^0-9]/g, '');
-  if (number.length < 10) return res.json({ error: 'Wrong number format. Use: 254748339103' });
-
-  const sessionId = `/tmp/session_${number}_${Date.now()}`; // Vercel only allows /tmp
-  if(!fs.existsSync(sessionId)) fs.mkdirSync(sessionId, { recursive: true });
-
   try {
+    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
     const { version } = await fetchLatestBaileysVersion();
-    const { state, saveCreds } = await useMultiFileAuthState(sessionId);
-    
+
     const sock = makeWASocket({
       version,
-      logger: pino({ level: 'silent' }),
       auth: state,
-      printQRInTerminal: false,
-      browser: Browsers.macOS('Desktop'), // Use Mac to avoid ban
-      connectTimeoutMs: 60000,
-      defaultQueryTimeoutMs: 0,
+      logger: pino({ level: 'silent' }),
+      browser: Browsers.macOS('Chrome')
     });
 
     sock.ev.on('creds.update', saveCreds);
 
-    let sent = false;
-    sock.ev.on('connection.update', async (update) => {
-      const { connection } = update;
-      
-      if(connection === 'open' && !sent){
-        sent = true;
-        await delay(4000); // Wait for WA to be ready
-        const code = await sock.requestPairingCode(number);
-        const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
-        res.status(200).json({ code: formattedCode });
-        await delay(8000);
-        sock.ws.close();
-        fs.rmSync(sessionId, { recursive: true, force: true }); // Cleanup
-      }
-    })
+    if (!sock.authState.creds.registered) {
+      await delay(1500);
+      const code = await sock.requestPairingCode(cleanNumber);
+      return res.json({ code: `BONY-BOT ${code}` });
+    }
 
-    setTimeout(() => {
-      if(!sent) {
-        res.status(200).json({ error: 'Timeout.
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Failed to generate code. Try again.' });
+  }
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/pair.html'));
+});
+
+module.exports = app;
