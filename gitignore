@@ -1,2 +1,3 @@
-session_*/
 node_modules/
+session_*/
+.vercel
