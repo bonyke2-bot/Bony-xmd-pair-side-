@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/pair.js": {
-      "runtime": "nodejs20.x"
+      "runtime": "@vercel/node"
     }
   }
 }
