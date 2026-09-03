@@ -2,16 +2,13 @@ import { webcrypto } from 'node:crypto'
 if (!globalThis.crypto) globalThis.crypto = webcrypto
 import pino from 'pino'
 import fs from 'fs'
-import Baileys from '@whiskeysockets/baileys'
-const makeWASocket = Baileys.default
-const { useMultiFileAuthState, makeCacheableSignalKeyStore, delay } = Baileys
+import makeWASocket, { useMultiFileAuthState, makeCacheableSignalKeyStore, delay } from '@whiskeysockets/baileys'
 
 export default async function handler(req, res) {
   try {
     let number = (req.query.number || '').replace(/[^0-9]/g, '')
     if(!number) return res.json({ error: 'number missing' })
     
-    // FIX 1: Random folder kila mtu, sio /tmp/number pekee
     const dir = '/tmp/' + number + '_' + Date.now()
     if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true })
     
@@ -28,15 +25,11 @@ export default async function handler(req, res) {
     })
     
     sock.ev.on('creds.update', saveCreds)
-    
-    await delay(3000) // FIX 2: Ngoja socket i-connect kwanza
+    await delay(3000)
     
     const code = await sock.requestPairingCode(number)
-    
-    // FIX 3: Tuma response lakini usizime socket
     res.json({ code })
     
-    // Keep alive 90 seconds
     sock.ev.on('connection.update', async ({ connection }) => {
       if(connection === 'open'){
         await delay(3000)
@@ -48,7 +41,6 @@ export default async function handler(req, res) {
       }
     })
     
-    // Keep function alive
     await delay(90000)
     try{ fs.rmSync(dir, { recursive: true, force: true }) }catch{}
     
