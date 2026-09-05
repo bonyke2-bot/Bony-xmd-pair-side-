@@ -4,33 +4,10 @@ const fs = require("fs")
 const pino = require("pino")
 const app = express()
 let sess = {}
-
 app.get("/", (req,res)=> res.redirect("/pair.html"))
 app.get("/pair.html", (req,res)=>{
-  res.send(`
-  <html><head><title>BONY PAIR</title></head>
-  <body style="text-align:center;font-family:Arial;padding:20px;background:#111;color:white">
-  <h2>BONY-XMD PAIR CODE</h2>
-  <input id="num" placeholder="2547XXXXXXXX" style="padding:12px;width:80%"><br><br>
-  <button onclick="getCode()" style="padding:12px 25px;background:#25D366;color:white;border:none;font-size:16px">GET CODE</button>
-  <h1 id="code" style="color:#25D366;margin-top:20px"></h1>
-  <pre id="session" style="background:#222;padding:10px;word-break:break-all;text-align:left"></pre>
-  <script>
-  async function getCode(){
-    let n=document.getElementById("num").value
-    document.getElementById("code").innerText="Wait 5 sec..."
-    let r=await fetch("/code?number="+n)
-    let d=await r.json()
-    document.getElementById("code").innerText=d.code||d.error
-    if(d.code) setInterval(async()=>{
-      let rr=await fetch("/session")
-      let dd=await rr.json()
-      if(dd.session) document.getElementById("session").innerText=dd.session
-    },3000)
-  }
-  </script></body></html>`)
+  res.send(`<html><head><title>BONY PAIR</title></head><body style="text-align:center;font-family:Arial;padding:20px;background:#111;color:white"><h2>BONY-XMD PAIR CODE</h2><input id="num" placeholder="2547XXXXXXXX" style="padding:12px;width:80%"><br><br><button onclick="getCode()" style="padding:12px 25px;background:#25D366;color:white;border:none;font-size:16px">GET CODE</button><h1 id="code" style="color:#25D366;margin-top:20px"></h1><pre id="session" style="background:#222;padding:10px;word-break:break-all;text-align:left;color:white"></pre><script>async function getCode(){let n=document.getElementById("num").value;document.getElementById("code").innerText="Wait 5 sec...";let r=await fetch("/code?number="+n);let d=await r.json();document.getElementById("code").innerText=d.code||d.error;if(d.code) setInterval(async()=>{let rr=await fetch("/session");let dd=await rr.json();if(dd.session) document.getElementById("session").innerText=dd.session},3000)}</script></body></html>`)
 })
-
 app.get("/code", async (req,res)=>{
   try{
     let num=(req.query.number||"").replace(/[^0-9]/g,"")
@@ -54,4 +31,5 @@ app.get("/code", async (req,res)=>{
   }catch(e){ res.json({error:e.message}) }
 })
 app.get("/session", (req,res)=> res.json(sess))
-app.listen(10000, ()=>console.log("PAIR SIDE RUNNING ON 10000"))
+const PORT = process.env.PORT || 10000
+app.listen(PORT, ()=>console.log("PAIR SIDE RUNNING ON "+PORT))
